@@ -7,7 +7,8 @@ locals {
     "field-extraction",
     "validus",
     "frame",
-    "gateway"
+    "gateway",
+    "frontend"
   ]
 }
 

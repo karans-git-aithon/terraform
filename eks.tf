@@ -34,14 +34,14 @@ resource "aws_eks_node_group" "main" {
   # --- LINK THE LAUNCH TEMPLATE HERE ---
   launch_template {
     id      = aws_launch_template.eks_node_lt.id
-    version = "$Latest"
+    version = "1"
   }
   # -------------------------------------
 
   scaling_config {
-    desired_size = 2
-    max_size     = 3
-    min_size     = 1
+    desired_size = 4
+    max_size     = 6
+    min_size     = 0
   }
 
   instance_types = ["t3.medium"] 

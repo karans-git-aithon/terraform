@@ -103,7 +103,7 @@ resource "aws_instance" "bastion" {
 # --- 7. Create Elastic IP (EIP) ---
 resource "aws_eip" "bastion_ip" {
   provider = aws.mumbai
-  vpc      = true # Important: EIPs for instances in a VPC must have this set to true
+  domain   = "vpc" # Important: EIPs for instances in a VPC must have this set to true
 
   tags = {
     Name = "bastionhost-ip"

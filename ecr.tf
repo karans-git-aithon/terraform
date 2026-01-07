@@ -8,7 +8,8 @@ locals {
     "validus",
     "frame",
     "gateway",
-    "frontend"
+    "frontend",
+    "common-service"
   ]
 }
 

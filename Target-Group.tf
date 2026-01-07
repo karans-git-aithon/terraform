@@ -23,7 +23,7 @@ locals {
   target_group_services = {
     # --- DOCUMENT SERVICES (Namespace: dev) ---
     "document-page-classification" = { node_port = 30003, k8s_service = "doc-page-classification-service", k8s_port = 8003, health_path = "/health", namespace = "dev" }
-    "document-classification"      = { node_port = 30006, k8s_service = "doc-classification-service", k8s_port = 8006, health_path = "/api/document-embedding-classification/health", namespace = "dev" }
+    "document-classification"      = { node_port = 30006, k8s_service = "doc-classification-service", k8s_port = 8006, health_path = "/", namespace = "dev" }
     "document-field-extraction"    = { node_port = 30004, k8s_service = "doc-field-extraction-service", k8s_port = 8004, health_path = "/api/field-extraction/health", namespace = "dev" }
     "text-extraction"              = { node_port = 30015, k8s_service = "text-extraction-service", k8s_port = 8015, health_path = "/api/document-text-extraction/health", namespace = "dev" }
     
@@ -33,11 +33,16 @@ locals {
     "fvrk-dev-tg"                  = { node_port = 30080, k8s_service = "frame-validus-service", k8s_port = 80, health_path = "/", namespace = "dev" }
     "frame"                        = { node_port = 30040, k8s_service = "frame-service", k8s_port = 8040, health_path = "/health", namespace = "dev" }   
     
+    # --- COMMON SERVICE ---
+    "common-service"               = { node_port = 30033, k8s_service = "common-service-service", k8s_port = 8000, health_path = "/health", namespace = "dev" }
+
     # --- INFRA SERVICES (Namespace: dev) ---
     "keycloak"                     = { node_port = 30102, k8s_service = "keycloak-service", k8s_port = 8080, health_path = "/health/live", namespace = "dev" }
     "konga-service"                = { node_port = 30108, k8s_service = "konga-service", k8s_port = 1337, health_path = "/status", namespace = "dev" }
     
-    # UPDATED: Jenkins configuration matching your K8s NodePort and Service Name
+    # *** FIXED: Changed k8s_port from 8001 -> 8000 to match Proxy NodePort 30107 ***
+    "kong-gateway"                 = { node_port = 30107, k8s_service = "kong-service", k8s_port = 8000, health_path = "/api/common/health", namespace = "dev" }
+    
     "jenkins-tg"                   = { node_port = 30088, k8s_service = "jenkins-service", k8s_port = 8080, health_path = "/login", namespace = "dev" }
     
     # --- ARGO CD (Namespace: argocd) ---
@@ -76,7 +81,7 @@ resource "aws_lb_target_group" "main" {
   }
 }
 
-# 4. KUBERNETES BINDINGS (This automatically registers K8s pods into the AWS TGs)
+# 4. KUBERNETES BINDINGS
 resource "kubernetes_manifest" "tg_bindings" {
   for_each = local.target_group_services
 
@@ -98,9 +103,9 @@ resource "kubernetes_manifest" "tg_bindings" {
   }
 }
 
-# 5. LISTENER RULES (Routing Logic)
+# 5. LISTENER RULES
 
-# Rule 1: Document Classification (Path-based)
+# Rule 1: Document Classification
 resource "aws_lb_listener_rule" "rule_1" {
   listener_arn = aws_lb_listener.https.arn
   priority     = 1
@@ -115,7 +120,7 @@ resource "aws_lb_listener_rule" "rule_1" {
   }
 }
 
-# Rule 2: Validus (Host-based)
+# Rule 2: Validus
 resource "aws_lb_listener_rule" "rule_2" {
   listener_arn = aws_lb_listener.https.arn
   priority     = 2
@@ -124,13 +129,13 @@ resource "aws_lb_listener_rule" "rule_2" {
     target_group_arn = aws_lb_target_group.main["validus"].arn
   }
   condition {
-    host_header {
-      values = ["validus.aithondev.com"]
+    path_pattern {
+      values = ["/api/validus/*"]
     }
   }
 }
 
-# Rule 3: Jenkins (Host-based)
+# Rule 3: Jenkins
 resource "aws_lb_listener_rule" "rule_3" {
   listener_arn = aws_lb_listener.https.arn
   priority     = 3
@@ -145,7 +150,7 @@ resource "aws_lb_listener_rule" "rule_3" {
   }
 }
 
-# Rule 4: ArgoCD (Host-based)
+# Rule 4: ArgoCD
 resource "aws_lb_listener_rule" "rule_4" {
   listener_arn = aws_lb_listener.https.arn
   priority     = 4
@@ -160,7 +165,7 @@ resource "aws_lb_listener_rule" "rule_4" {
   }
 }
 
-# Rule 5: Page Classification (Path-based)
+# Rule 5: Page Classification
 resource "aws_lb_listener_rule" "rule_5" {
   listener_arn = aws_lb_listener.https.arn
   priority     = 5
@@ -175,7 +180,7 @@ resource "aws_lb_listener_rule" "rule_5" {
   }
 }
 
-# Rule 6: Field Extraction (Path-based)
+# Rule 6: Field Extraction
 resource "aws_lb_listener_rule" "rule_6" {
   listener_arn = aws_lb_listener.https.arn
   priority     = 6
@@ -190,7 +195,7 @@ resource "aws_lb_listener_rule" "rule_6" {
   }
 }
 
-# Rule 7: Konga (Host-based)
+# Rule 7: Konga (UI)
 resource "aws_lb_listener_rule" "rule_7" {
   listener_arn = aws_lb_listener.https.arn
   priority     = 7
@@ -205,7 +210,7 @@ resource "aws_lb_listener_rule" "rule_7" {
   }
 }
 
-# Rule 8: Keycloak (Host-based)
+# Rule 8: Keycloak
 resource "aws_lb_listener_rule" "rule_8" {
   listener_arn = aws_lb_listener.https.arn
   priority     = 8
@@ -220,7 +225,7 @@ resource "aws_lb_listener_rule" "rule_8" {
   }
 }
 
-# Rule 9: RabbitMQ (Host-based)
+# Rule 9: RabbitMQ
 resource "aws_lb_listener_rule" "rule_9" {
   listener_arn = aws_lb_listener.https.arn
   priority     = 9
@@ -235,7 +240,7 @@ resource "aws_lb_listener_rule" "rule_9" {
   }
 }
 
-# Rule 10: Text Extraction (Path-based)
+# Rule 10: Text Extraction
 resource "aws_lb_listener_rule" "rule_10" {
   listener_arn = aws_lb_listener.https.arn
   priority     = 10
@@ -250,7 +255,22 @@ resource "aws_lb_listener_rule" "rule_10" {
   }
 }
 
-# Rule 12: Frame (Host-based)
+# Rule 11: Kong Gateway
+resource "aws_lb_listener_rule" "rule_11" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 11
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.main["kong-gateway"].arn
+  }
+  condition {
+    host_header {
+      values = ["sit-gateway.aithondev.com"]
+    }
+  }
+}
+
+# Rule 12: Frame
 resource "aws_lb_listener_rule" "rule_12" {
   listener_arn = aws_lb_listener.https.arn
   priority     = 12
@@ -259,8 +279,23 @@ resource "aws_lb_listener_rule" "rule_12" {
     target_group_arn = aws_lb_target_group.main["frame"].arn
   }
   condition {
-    host_header {
-      values = ["frame.aithondev.com"]
+    path_pattern {
+      values = ["/api/frame/*"]
+    }
+  }
+}
+
+# Rule 13: Common Service
+resource "aws_lb_listener_rule" "rule_14" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 13
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.main["common-service"].arn
+  }
+  condition {
+    path_pattern {
+      values = ["/api/common/*"]
     }
   }
 }
